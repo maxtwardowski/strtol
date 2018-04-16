@@ -14,7 +14,7 @@ print_num (long number, int base)
   if (number >= 0)
     {
       power_of_base = 1;
-      /* Find the greatest power of 'base' which isn't more 
+      /* Find the greatest power of 'base' which isn't more
          than the number */
       while (power_of_base <= number / base)
 	power_of_base = power_of_base * base;
@@ -110,8 +110,8 @@ main ()
   test_strtol ("-0x7FFFFFFEEEEEEEEEEE???", 0, 16);
   test_strtol ("-0xZZZZZZZZZZZZZZZZ???", 36, 36);
   test_strtol ("-#$#$", 36, 36);
-  
-  test_strtol ("-#$#$", 40, 10);  
+
+  test_strtol ("-#$#$", 40, 10);
   test_strtol ("10", 40, 10);
   test_strtol ("10", 1, 10);
   test_strtol ("0", 1, 10);

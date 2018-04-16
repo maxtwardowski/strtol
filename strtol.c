@@ -1,115 +1,134 @@
-#include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
-#include <assert.h>
-#include <errno.h>
-#include <limits.h>
+#include <errno.h> //for returning error codes to compare with test_strtol
+#include <limits.h> //for LONG_MAX & LONG_MIN
+#include <stdbool.h>
+
+#define NUL '\0'
+
 
 long strtolx (const char *nPtr, char **endPtr, int base) {
+    //checking if the base value is correct
+    if((base < 2 || base > 36) && base != 0) {
+        errno = EINVAL;
+        return 0;
+    }
+
     long number = 0;
-    char * charposition;
-    int digit, sign, cutlim, any = 0;
+    char * divider;
+    int currentdigit,
+        sign,
+        cutlim;
     const int POSITIVE = 1,
               NEGATIVE = 0;
     unsigned long cutoff;
+    bool correctconversion = true;
 
-    assert(nPtr);
-    charposition = nPtr;
+    divider = nPtr;
 
     //looking for a space if the beggining of the string is moved further
-    while (isspace(* charposition))
-        charposition++;
+    while (isspace(* divider))
+        divider++;
 
-    if (* charposition == '+') {
+    if ((* divider >= 'a' && * divider <= 'z') || (* divider >= 'A' && * divider <= 'Z')) {
+        errno = EINVAL;
+        return 0;
+    }
+    //detecting the sign, positive by default
+    if (* divider == '+') {
         sign = POSITIVE;
-        charposition++;
-    } else if (* charposition == '-') {
+        divider++;
+    } else if (* divider == '-') {
         sign = NEGATIVE;
-        charposition++;
+        divider++;
     } else
         sign = POSITIVE;
 
-    if ((base == 8) && (*charposition == '0'))
-        charposition++;
-    if ((base == 16) && (*charposition == '0')) {
-        charposition++;
-        if (*charposition == 'x' || *charposition == 'X') {
-            charposition++;
-            if (*charposition > 'f') {
-                charposition--;
-                *endPtr = charposition;
+    if ((base == 8) && (*divider == '0')) {
+        divider++;
+        if (*divider == 'o') //if the input includes 'o', it's skipped
+            divider++;
+    }
+    else if ((base == 16) && (*divider == '0')) {
+        divider++;
+        if (*divider == 'x' || *divider == 'X') {
+            divider++;
+            if (*divider > 'f') {
+                divider--;
+                *endPtr = divider;
                 return 0;
             }
         }
         else
-            charposition--;
-    }
-
-    if((* charposition == '0') && (base == 0)) {
-        base = 8;
-        charposition++;
-    	if((* charposition == 'x') || (* charposition == 'X')){
-    		 base = 16;
-    		 charposition++;
-    		 if(* charposition > 'f') {
-                 charposition--;
-                 * endPtr = charposition;
-                 return 0;
-             }
-    	}
-    	if(*charposition > '7') {
-            *endPtr = charposition;
-            return 0;
+            divider--;
+    //basically the system-detecting algorithm
+    } else if (base == 0) {
+        if (* divider == '0') {
+            divider++;
+            if (* divider != 'x' && * divider != 'X') {
+                if (* divider == 'o')
+                    divider++;
+                base = 8;
+            } else if (* divider == 'x' || * divider == 'X') {
+                base = 16;
+                divider++;
+                if (* divider > 'f') {
+                    divider--;
+                    * endPtr = divider;
+                    return 0;
+                }
+            }
+        } else if (* divider >= '1' && * divider <= '9') {
+                base = 10;
+                divider++;
         }
     }
-    if(base == 0)
-        base = 10;
-    if(base < 2 || base > 36){
-    	errno = EINVAL;
-    	return 0;
-    }
 
+    //two conditions just for clarity --> |LONG_MIN| = LONG_MAX + 1
     if (sign)
-    	cutoff = - (unsigned long) LONG_MIN;
+        cutoff = LONG_MAX / (unsigned long) base;
     else
-    	cutoff = LONG_MAX;
+        cutoff = (unsigned long) LONG_MIN / (unsigned long) base;
     cutlim = cutoff % (unsigned long) base;
-    cutoff /= (unsigned long) base;
-    while (* charposition != '\0') {
-    	if (isdigit(* charposition))
-    		digit = * charposition - '0';
+    while (* divider != NUL) { //looping until the end of the input string
+    	if (isdigit(* divider))
+    		currentdigit = * divider - '0'; //converting to the actual integer
     	else {
-    		if(isalpha(* charposition)) {
-    			if(islower(* charposition))
-    				digit = (* charposition - 'a') + 10;
-    			else
-                    digit = (* charposition - 'A') + 10;
+    		if(isalpha(* divider)) {
+    			if(islower(* divider) && (* divider - 'a') + 10 < base)
+    				currentdigit = (* divider - 'a') + 10;
+    			else if (!islower(* divider) && (* divider - 'A') + 10 < base)
+                    currentdigit = (* divider - 'A') + 10;
+                else
+                    break;
     		} else
     			break;
     	}
-    	if (any < 0 || number > cutoff || (number == cutoff && (int) digit > cutlim)) {
-    		  any = -1;
-    		  charposition++;
-    	}
-    	else {
-    		any = 1;
-    		number = (number * base) + digit;
-    		charposition++;
+    	if (!correctconversion ||
+            number > cutoff ||
+            (number == cutoff && (int) currentdigit > cutlim)) {
+    		  correctconversion = false;
+    		  divider++;
+    	} else { //the actual conversion to decimal
+    		correctconversion = true;
+    		number = (number * base) + currentdigit;
+    		divider++;
     	}
     }
-    if (any < 0) {
+    if (!correctconversion) {
     	if (sign)
-    		number = LONG_MIN;
-    	else
     		number = LONG_MAX;
+    	else
+    		number = LONG_MIN;
     	errno = ERANGE;
     }
     if (sign == NEGATIVE)
     	number *= -1;
-    if (endPtr != '\0') {
-    	if (any)
-    		* endPtr = charposition;
+    if (endPtr != NUL) {
+        if (isspace(* divider)) //checking if the number is separated
+            divider++;          //from the rest of the string
+    	if (correctconversion)
+    		* endPtr = divider;
     	else
     		* endPtr = (char *) nPtr;
     }

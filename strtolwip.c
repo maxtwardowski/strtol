@@ -1,7 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h>
+#include <ctype.h> //for ifalpha, ifdigit, ifspace functions
 #include <errno.h> //for returning error codes to compare with test_strtol
 #include <limits.h> //for LONG_MAX & LONG_MIN
 #include <stdbool.h>
