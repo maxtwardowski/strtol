@@ -49,7 +49,7 @@ string++;
 }
 if(base==0) base = 10;
 if(base <2 || base >36){
-	errno=EINVAL;// o co chodzi
+	errno=ERANGE;// o co chodzi
 	return 0;
 }
 cutoff = sign ? -(unsigned long) LONG_MIN : LONG_MAX; // jesli sign=1 to cutoff=-LONG_MIN

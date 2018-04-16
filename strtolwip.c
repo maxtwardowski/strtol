@@ -16,28 +16,41 @@ int main(int argc, char const *argv[]) {
 
 long strtolx (const char *nPtr, char **endPtr, int base) {
     long number = 0;
-    char * string;
+    char * charposition;
     int sign;
     const int POSITIVE = 1,
               NEGATIVE = 0;
     assert(nPtr);
-    string = nPtr;
+    charposition = nPtr;
 
     //looking for a space if the beggining of the string is moved further
-    while (isspace(* string))
-        string++;
+    while (isspace(* charposition))
+        charposition++;
 
-    if (* string == '+') {
+    if (* charposition == '+') {
         sign = POSITIVE;
-        string++;
-    } else if (* string == '-') {
+        charposition++;
+    } else if (* charposition == '-') {
         sign = NEGATIVE;
-        string++;
+        charposition++;
     } else
         sign = POSITIVE;
 
-    //printf("%d\n", sign);
-    //printf("%c\n", *string);
+    if ((base == 8) && (*charposition == '0'))
+        charposition++;
+    if ((base == 16) && (*charposition == '0') {
+        charposition++;
+        if (*charposition == 'x' || *charposition == 'X') {
+            charposition++;
+            if (*charposition > 'f') {
+                charposition--;
+                *endptr = charposition;
+                return 0;
+            }
+        }
+        else
+            charposition--;
+    }
 
 
 
