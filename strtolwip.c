@@ -27,7 +27,7 @@ long strtolx (const char *nPtr, char **endPtr, int base) {
     }
 
     long number = 0;
-    char * divider;
+    const char * divider;
     int currentdigit,
         sign,
         cutlim;

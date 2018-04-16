@@ -18,7 +18,7 @@ tests: test_std_strtol test_my_strtol
 	cmp rep.my rep.std
 
 clean:
-	-rm test_strtol.o strtol.o test_std_strtol test_my_strtol rep.my rep.std
+	-rm test_strtol.o strtol.o test_std_strtol test_my_strtol rep.my rep.std strtolwip
 
 wip:
 	gcc strtolwip.c -o strtolwip -lm
