@@ -4,18 +4,18 @@
 #include <ctype.h>
 #include <errno.h> //for returning error codes to compare with test_strtol
 #include <limits.h> //for LONG_MAX & LONG_MIN
+#include <stdbool.h>
 
 #define NUL '\0'
 
 long strtolx (const char *nPtr, char **endPtr, int base);
 
 int main(int argc, char const *argv[]) {
-    char input[] = "0o764 wat man";
+    char input[] = "0xfa35 wat man";
     char * rest;
     long convertednumber = strtolx (input, &rest, 0);
     printf("Converted number = %ld\n", convertednumber);
     printf("Rest of the string: %s\n", rest);
-
     return 0;
 }
 
@@ -28,10 +28,13 @@ long strtolx (const char *nPtr, char **endPtr, int base) {
 
     long number = 0;
     char * divider;
-    int currentdigit, sign, cutlim, any = 0;
+    int currentdigit,
+        sign,
+        cutlim;
     const int POSITIVE = 1,
               NEGATIVE = 0;
     unsigned long cutoff;
+    bool correctconversion = true;
 
     divider = nPtr;
 
@@ -39,6 +42,10 @@ long strtolx (const char *nPtr, char **endPtr, int base) {
     while (isspace(* divider))
         divider++;
 
+    if ((* divider >= 'a' && * divider <= 'z') || (* divider >= 'A' && * divider <= 'Z')) {
+        errno = EINVAL;
+        return 0;
+    }
     //detecting the sign, positive by default
     if (* divider == '+') {
         sign = POSITIVE;
@@ -96,7 +103,7 @@ long strtolx (const char *nPtr, char **endPtr, int base) {
         cutoff = (unsigned long) LONG_MIN / (unsigned long) base;
     cutlim = cutoff % (unsigned long) base;
     while (* divider != NUL) { //looping until the end of the input string
-    	if (iscurrentdigit(* divider))
+    	if (isdigit(* divider))
     		currentdigit = * divider - '0'; //converting to the actual integer
     	else {
     		if(isalpha(* divider)) {
@@ -109,30 +116,30 @@ long strtolx (const char *nPtr, char **endPtr, int base) {
     		} else
     			break;
     	}
-    	if (any < 0 ||
+    	if (!correctconversion ||
             number > cutoff ||
             (number == cutoff && (int) currentdigit > cutlim)) {
-    		  any = -1;
+    		  correctconversion = false;
     		  divider++;
     	} else { //the actual conversion to decimal
-    		any = 1;
+    		correctconversion = true;
     		number = (number * base) + currentdigit;
     		divider++;
     	}
     }
-    if (any < 0) {
+    if (!correctconversion) {
     	if (sign)
-    		number = LONG_MIN;
-    	else
     		number = LONG_MAX;
+    	else
+    		number = LONG_MIN;
     	errno = ERANGE;
     }
     if (sign == NEGATIVE)
     	number *= -1;
-    if (endPtr != '\0') {
+    if (endPtr != NUL) {
         if (isspace(* divider)) //checking if the number is separated
             divider++;          //from the rest of the string
-    	if (any)
+    	if (correctconversion)
     		* endPtr = divider;
     	else
     		* endPtr = (char *) nPtr;
