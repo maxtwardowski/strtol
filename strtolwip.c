@@ -67,7 +67,7 @@ long strtolx (const char *nPtr, char **endPtr, int base) {
             divider++;
             if (*divider > 'f') {
                 divider--;
-                *endPtr = divider;
+                *endPtr = (char *)divider;
                 return 0;
             }
         }
@@ -86,7 +86,7 @@ long strtolx (const char *nPtr, char **endPtr, int base) {
                 divider++;
                 if (* divider > 'f') {
                     divider--;
-                    * endPtr = divider;
+                    * endPtr = (char *) divider;
                     return 0;
                 }
             }
@@ -140,7 +140,7 @@ long strtolx (const char *nPtr, char **endPtr, int base) {
         if (isspace(* divider)) //checking if the number is separated
             divider++;          //from the rest of the string
     	if (correctconversion)
-    		* endPtr = divider;
+    		* endPtr = (char *) divider;
     	else
     		* endPtr = (char *) nPtr;
     }
