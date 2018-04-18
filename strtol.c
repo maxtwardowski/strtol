@@ -6,16 +6,18 @@
 
 #define NUL '\0'
 
-long strtolx (const char *nPtr, char **endPtr, int base) {
+long strtol (const char *nPtr, char **endPtr, int base) {
     //checking if the base value is correct
     if((base < 2 || base > 36) && base != 0) {
-        errno = EINVAL;
+        //errno = EINVAL;
         return 0;
     }
 
     long number = 0;
     const char * divider;
-    int currentdigit, sign, cutlim;
+    int currentdigit,
+        sign,
+        cutlim;
     const int POSITIVE = 1,
               NEGATIVE = 0;
     unsigned long cutoff;
@@ -27,10 +29,6 @@ long strtolx (const char *nPtr, char **endPtr, int base) {
     while (isspace(* divider))
         divider++;
 
-    if ((* divider >= 'a' && * divider <= 'z') || (* divider >= 'A' && * divider <= 'Z')) {
-        errno = EINVAL;
-        return 0;
-    }
     //detecting the sign, positive by default
     if (* divider == '+') {
         sign = POSITIVE;
@@ -41,35 +39,56 @@ long strtolx (const char *nPtr, char **endPtr, int base) {
     } else
         sign = POSITIVE;
 
-    if ((base == 8) && (*divider == '0')) {
+    if (* divider == NUL) {
+        * endPtr = (char *) divider;
+        return 0;
+    }
+
+    if (* divider < '0' || (* divider > '9' && * divider < 'A') || (* divider > 'z')) {
+        errno = EINVAL;
+        //* endPtr = (char *) divider;
+        return 0;
+    }
+    /*if ((islower(* divider) && (* divider - 'a') + 10 >= base) ||
+        (!islower(* divider) && (* divider - 'A') + 10 >= base) ||
+         * divider > 'z' ||
+         * divider > 'Z') {
+        errno = EINVAL;
+        //* endPtr = (char *) divider;
+        return 0;
+    }*/
+
+    if ((base == 8) && (* divider == '0')) {
         divider++;
-        if (*divider == 'o') //if the input includes 'o', it's skipped
+        if (* divider == 'o' || * divider == 'O') //if the input includes 'o', it's skipped
             divider++;
     }
-    else if ((base == 16) && (*divider == '0')) {
-        divider++;
-        if (*divider == 'x' || *divider == 'X') {
+    else if ((base == 16)) {
+        if (* divider == '0') {
             divider++;
-            if (*divider > 'f') {
-                divider--;
-                *endPtr = (char *) divider;
-                return 0;
+            if (* divider == 'x' || * divider == 'X') {
+                divider++;
+                if (* divider > 'f' || * divider > 'F') {
+                    divider--;
+                    *endPtr = (char *) divider;
+                    return 0;
+                }
             }
+            else
+                divider--;
         }
-        else
-            divider--;
     //basically the system-detecting algorithm
     } else if (base == 0) {
         if (* divider == '0') {
             divider++;
             if (* divider != 'x' && * divider != 'X') {
-                if (* divider == 'o')
+                if (* divider == 'o' || * divider == 'O')
                     divider++;
                 base = 8;
             } else if (* divider == 'x' || * divider == 'X') {
                 base = 16;
                 divider++;
-                if (* divider > 'f') {
+                if (* divider > 'f' || * divider > 'F') {
                     divider--;
                     * endPtr = (char *) divider;
                     return 0;
@@ -92,7 +111,7 @@ long strtolx (const char *nPtr, char **endPtr, int base) {
     		currentdigit = * divider - '0'; //converting to the actual integer
     	else {
     		if(isalpha(* divider)) {
-    			if(islower(* divider) && (* divider - 'a') + 10 < base)
+    			if (islower(* divider) && (* divider - 'a') + 10 < base)
     				currentdigit = (* divider - 'a') + 10;
     			else if (!islower(* divider) && (* divider - 'A') + 10 < base)
                     currentdigit = (* divider - 'A') + 10;
@@ -124,10 +143,10 @@ long strtolx (const char *nPtr, char **endPtr, int base) {
     if (endPtr != NUL) {
         if (isspace(* divider)) //checking if the number is separated
             divider++;          //from the rest of the string
-    	if (correctconversion)
+    	//if (correctconversion)
     		* endPtr = (char *) divider;
-    	else
-    		* endPtr = (char *) nPtr;
+    	//else
+    		//* endPtr = (char *) nPtr;
     }
     return number;
 }
