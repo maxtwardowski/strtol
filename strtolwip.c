@@ -1,8 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <ctype.h> //for ifalpha, ifdigit, ifspace functions
-#include <errno.h> //for returning error codes to compare with test_strtol
+#include <ctype.h> //ifalpha, ifdigit, ifspace functions
+#include <errno.h> //returning error codes to compare with test_strtol output
 #include <limits.h> //for LONG_MAX & LONG_MIN
 #include <stdbool.h>
 
@@ -11,11 +11,12 @@
 long strtolx (const char *nPtr, char **endPtr, int base);
 
 int main(int argc, char const *argv[]) {
-    char input[] = "0xfa35 wat man";
+    char input[] = "-071";
     char * rest;
-    long convertednumber = strtolx (input, &rest, 0);
+    long convertednumber = strtol (input, &rest, 0);
     printf("Converted number = %ld\n", convertednumber);
     printf("Rest of the string: %s\n", rest);
+    printf("%d\n", errno);
     return 0;
 }
 
@@ -42,10 +43,6 @@ long strtolx (const char *nPtr, char **endPtr, int base) {
     while (isspace(* divider))
         divider++;
 
-    if ((* divider >= 'a' && * divider <= 'z') || (* divider >= 'A' && * divider <= 'Z')) {
-        errno = EINVAL;
-        return 0;
-    }
     //detecting the sign, positive by default
     if (* divider == '+') {
         sign = POSITIVE;
@@ -56,43 +53,74 @@ long strtolx (const char *nPtr, char **endPtr, int base) {
     } else
         sign = POSITIVE;
 
-    if ((base == 8) && (*divider == '0')) {
+    if (* divider == NUL) {
+        * endPtr = (char *) divider;
+        return 0;
+    }
+
+    if (* divider < '0' || (* divider > '9' && * divider < 'A') || (* divider > 'z')) {
+        //errno = EINVAL;
+        //* endPtr = (char *) divider;
+        return 0;
+    }
+    /*if ((islower(* divider) && (* divider - 'a') + 10 >= base) ||
+        (!islower(* divider) && (* divider - 'A') + 10 >= base) ||
+         * divider > 'z' ||
+         * divider > 'Z') {
+        errno = EINVAL;
+        * endPtr = (char *) divider;
+        return 0;
+    }*/
+
+    if ((base == 8) && (* divider == '0')) {
         divider++;
-        if (*divider == 'o') //if the input includes 'o', it's skipped
+        if (* divider == 'o' || * divider == 'O') //if the input includes 'o', it's skipped
             divider++;
     }
-    else if ((base == 16) && (*divider == '0')) {
-        divider++;
-        if (*divider == 'x' || *divider == 'X') {
+    else if ((base == 16)) {
+        if (* divider == '0') {
             divider++;
-            if (*divider > 'f') {
-                divider--;
-                *endPtr = (char *)divider;
-                return 0;
+            if (* divider == 'x' || * divider == 'X') {
+                divider++;
+                if (* divider > 'f' || * divider > 'F') {
+                    divider--;
+                    *endPtr = (char *) divider;
+                    return 0;
+                }
             }
+            else
+                divider--;
         }
-        else
-            divider--;
     //basically the system-detecting algorithm
     } else if (base == 0) {
         if (* divider == '0') {
             divider++;
-            if (* divider != 'x' && * divider != 'X') {
-                if (* divider == 'o')
-                    divider++;
+            if (* divider == 'o' || * divider == 'O') {
                 base = 8;
-            } else if (* divider == 'x' || * divider == 'X') {
-                base = 16;
                 divider++;
-                if (* divider > 'f') {
+                if (* divider > '7') {
                     divider--;
                     * endPtr = (char *) divider;
                     return 0;
                 }
+            } else if (* divider == 'x' || * divider == 'X') {
+                base = 16;
+                divider++;
+                if (* divider > 'f' || * divider > 'F') {
+                    divider--;
+                    * endPtr = (char *) divider;
+                    return 0;
+                }
+            } else if (* divider >= '1' && * divider <= '9') {
+                base = 10;
+            } else {
+                divider--;
+                * endPtr = (char *) divider;
+                return 0;
             }
         } else if (* divider >= '1' && * divider <= '9') {
                 base = 10;
-                divider++;
+                //divider++;
         }
     }
 
@@ -102,12 +130,15 @@ long strtolx (const char *nPtr, char **endPtr, int base) {
     else
         cutoff = (unsigned long) LONG_MIN / (unsigned long) base;
     cutlim = cutoff % (unsigned long) base;
-    while (* divider != NUL) { //looping until the end of the input string
+
+    //looping until the end of the input string
+    //searching for convertable characters
+    while (* divider != NUL) {
     	if (isdigit(* divider))
     		currentdigit = * divider - '0'; //converting to the actual integer
     	else {
-    		if(isalpha(* divider)) {
-    			if(islower(* divider) && (* divider - 'a') + 10 < base)
+    		if (isalpha(* divider)) {
+    			if (islower(* divider) && (* divider - 'a') + 10 < base)
     				currentdigit = (* divider - 'a') + 10;
     			else if (!islower(* divider) && (* divider - 'A') + 10 < base)
                     currentdigit = (* divider - 'A') + 10;
@@ -139,10 +170,11 @@ long strtolx (const char *nPtr, char **endPtr, int base) {
     if (endPtr != NUL) {
         if (isspace(* divider)) //checking if the number is separated
             divider++;          //from the rest of the string
-    	if (correctconversion)
+    	//if (correctconversion)
     		* endPtr = (char *) divider;
-    	else
-    		* endPtr = (char *) nPtr;
+    	//else
+    	//	* endPtr = (char *) nPtr;
     }
+    printf("BASE %d\n", base);
     return number;
 }
