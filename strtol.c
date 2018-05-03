@@ -9,7 +9,7 @@
 long strtol (const char *nPtr, char **endPtr, int base) {
     //checking if the base value is correct
     if((base < 2 || base > 36) && base != 0) {
-        //errno = EINVAL;
+        errno = EINVAL;
         return 0;
     }
 
@@ -18,8 +18,7 @@ long strtol (const char *nPtr, char **endPtr, int base) {
     int currentdigit,
         sign,
         cutlim;
-    const int POSITIVE = 1,
-              NEGATIVE = 0;
+    enum sign {NEGATIVE, POSITIVE};
     unsigned long cutoff;
     bool correctconversion = true;
 
@@ -44,19 +43,8 @@ long strtol (const char *nPtr, char **endPtr, int base) {
         return 0;
     }
 
-    if (* divider < '0' || (* divider > '9' && * divider < 'A') || (* divider > 'z')) {
-        errno = EINVAL;
-        //* endPtr = (char *) divider;
+    if (* divider < '0' || (* divider > '9' && * divider < 'A') || (* divider > 'z'))
         return 0;
-    }
-    /*if ((islower(* divider) && (* divider - 'a') + 10 >= base) ||
-        (!islower(* divider) && (* divider - 'A') + 10 >= base) ||
-         * divider > 'z' ||
-         * divider > 'Z') {
-        errno = EINVAL;
-        //* endPtr = (char *) divider;
-        return 0;
-    }*/
 
     if ((base == 8) && (* divider == '0')) {
         divider++;
@@ -81,10 +69,14 @@ long strtol (const char *nPtr, char **endPtr, int base) {
     } else if (base == 0) {
         if (* divider == '0') {
             divider++;
-            if (* divider != 'x' && * divider != 'X') {
-                if (* divider == 'o' || * divider == 'O')
-                    divider++;
+            if (* divider == 'o' || * divider == 'O') {
                 base = 8;
+                divider++;
+                if (* divider > '7') {
+                    divider--;
+                    * endPtr = (char *) divider;
+                    return 0;
+                }
             } else if (* divider == 'x' || * divider == 'X') {
                 base = 16;
                 divider++;
@@ -93,10 +85,14 @@ long strtol (const char *nPtr, char **endPtr, int base) {
                     * endPtr = (char *) divider;
                     return 0;
                 }
+            } else if (* divider <= '7') {
+                base = 8;
+            } else {
+                * endPtr = (char *) divider;
+                return 0;
             }
         } else if (* divider >= '1' && * divider <= '9') {
                 base = 10;
-                divider++;
         }
     }
 
@@ -106,11 +102,14 @@ long strtol (const char *nPtr, char **endPtr, int base) {
     else
         cutoff = (unsigned long) LONG_MIN / (unsigned long) base;
     cutlim = cutoff % (unsigned long) base;
-    while (* divider != NUL) { //looping until the end of the input string
+
+    //looping until the end of the input string
+    //searching for convertable characters
+    while (* divider != NUL) {
     	if (isdigit(* divider))
     		currentdigit = * divider - '0'; //converting to the actual integer
     	else {
-    		if(isalpha(* divider)) {
+    		if (isalpha(* divider)) {
     			if (islower(* divider) && (* divider - 'a') + 10 < base)
     				currentdigit = (* divider - 'a') + 10;
     			else if (!islower(* divider) && (* divider - 'A') + 10 < base)
@@ -143,10 +142,7 @@ long strtol (const char *nPtr, char **endPtr, int base) {
     if (endPtr != NUL) {
         if (isspace(* divider)) //checking if the number is separated
             divider++;          //from the rest of the string
-    	//if (correctconversion)
-    		* endPtr = (char *) divider;
-    	//else
-    		//* endPtr = (char *) nPtr;
+    	* endPtr = (char *) divider;
     }
     return number;
 }
