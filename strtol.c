@@ -1,14 +1,14 @@
 #include <string.h>
 #include <ctype.h>
-#include <errno.h> //for returning error codes to compare with test_strtol
-#include <limits.h> //for LONG_MAX & LONG_MIN
+#include <errno.h>
+#include <limits.h>
 #include <stdbool.h>
 
 #define NUL '\0'
 
 long strtol (const char *nPtr, char **endPtr, int base) {
     //checking if the base value is correct
-    if((base < 2 || base > 36) && base != 0) {
+    if ((base < 2 || base > 36) && base != 0) {
         errno = EINVAL;
         return 0;
     }
@@ -17,10 +17,10 @@ long strtol (const char *nPtr, char **endPtr, int base) {
     const char * divider;
     int currentdigit,
         sign,
-        cutlim;
+        maximum_digittoadd;
     enum sign {NEGATIVE, POSITIVE};
-    unsigned long cutoff;
-    bool correctconversion = true;
+    unsigned long maximum_number;
+    bool conversion_possible = true;
 
     divider = nPtr;
 
@@ -98,10 +98,10 @@ long strtol (const char *nPtr, char **endPtr, int base) {
 
     //two conditions just for clarity --> |LONG_MIN| = LONG_MAX + 1
     if (sign)
-        cutoff = LONG_MAX / (unsigned long) base;
+        maximum_number = LONG_MAX / (unsigned long) base;
     else
-        cutoff = (unsigned long) LONG_MIN / (unsigned long) base;
-    cutlim = cutoff % (unsigned long) base;
+        maximum_number = (unsigned long) LONG_MIN / (unsigned long) base;
+    maximum_digittoadd = maximum_number % (unsigned long) base;
 
     //looping until the end of the input string
     //searching for convertable characters
@@ -119,18 +119,18 @@ long strtol (const char *nPtr, char **endPtr, int base) {
     		} else
     			break;
     	}
-    	if (!correctconversion ||
-            number > cutoff ||
-            (number == cutoff && (int) currentdigit > cutlim)) {
-    		  correctconversion = false;
+    	if (!conversion_possible ||
+            number > maximum_number ||
+            (number == maximum_number && (int) currentdigit > maximum_digittoadd)) {
+    		  conversion_possible = false;
     		  divider++;
     	} else { //the actual conversion to decimal
-    		correctconversion = true;
+    		conversion_possible = true;
     		number = (number * base) + currentdigit;
     		divider++;
     	}
     }
-    if (!correctconversion) {
+    if (!conversion_possible) {
     	if (sign)
     		number = LONG_MAX;
     	else
@@ -138,7 +138,7 @@ long strtol (const char *nPtr, char **endPtr, int base) {
     	errno = ERANGE;
     }
     if (sign == NEGATIVE)
-    	number *= -1;
+    	number = -number;
     if (endPtr != NUL) {
         if (isspace(* divider)) //checking if the number is separated
             divider++;          //from the rest of the string
