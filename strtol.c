@@ -6,6 +6,9 @@
 
 #define NUL '\0'
 
+#define POSITIVE 1
+#define NEGATIVE -1
+
 long strtol (const char *nPtr, char **endPtr, int base) {
     //checking if the base value is correct
     if ((base < 2 || base > 36) && base != 0) {
@@ -18,7 +21,6 @@ long strtol (const char *nPtr, char **endPtr, int base) {
     int currentdigit,
         sign,
         maximum_digittoadd;
-    enum sign {NEGATIVE, POSITIVE};
     unsigned long maximum_number;
     bool conversion_possible = true;
 
@@ -97,10 +99,10 @@ long strtol (const char *nPtr, char **endPtr, int base) {
     }
 
     //two conditions just for clarity --> |LONG_MIN| = LONG_MAX + 1
-    if (sign)
-        maximum_number = LONG_MAX / (unsigned long) base;
+    if (sign == POSITIVE)
+        maximum_number = (unsigned long) LONG_MAX * sign / (unsigned long) base;
     else
-        maximum_number = (unsigned long) LONG_MIN / (unsigned long) base;
+        maximum_number = (unsigned long) LONG_MIN * sign / (unsigned long) base;
     maximum_digittoadd = maximum_number % (unsigned long) base;
 
     //looping until the end of the input string
@@ -120,25 +122,25 @@ long strtol (const char *nPtr, char **endPtr, int base) {
     			break;
     	}
     	if (!conversion_possible ||
-            number > maximum_number ||
-            (number == maximum_number && (int) currentdigit > maximum_digittoadd)) {
+            (unsigned long) number * sign > maximum_number ||
+            ((unsigned long) number * sign == maximum_number && (int) currentdigit > (unsigned int) maximum_digittoadd)) {
     		  conversion_possible = false;
     		  divider++;
     	} else { //the actual conversion to decimal
     		conversion_possible = true;
-    		number = (number * base) + currentdigit;
-    		divider++;
+    		number = (number * base) + ((sign == POSITIVE) ? 1 : -1) * currentdigit;
+            divider++;
     	}
     }
     if (!conversion_possible) {
-    	if (sign)
+    	if (sign == POSITIVE)
     		number = LONG_MAX;
     	else
     		number = LONG_MIN;
     	errno = ERANGE;
     }
-    if (sign == NEGATIVE)
-    	number = -number;
+    //if (sign == NEGATIVE)
+    //	number = -number;
     if (endPtr != NUL) {
         if (isspace(* divider)) //checking if the number is separated
             divider++;          //from the rest of the string
